@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"github.com/pkg/term/termios"
 	"os"
 	"syscall"
@@ -28,6 +27,8 @@ func enableRawMode(term *syscall.Termios) error {
 	newTerm.Oflag &^= syscall.OPOST
 	newTerm.Cflag |= syscall.CS8
 	newTerm.Lflag &^= syscall.ECHO | syscall.ICANON | syscall.IEXTEN | syscall.ISIG
+	newTerm.Cc[syscall.VMIN] = 0
+	newTerm.Cc[syscall.VTIME] = 1
 	if err = termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, &newTerm); err != nil {
 		return err
 	}
@@ -55,10 +56,7 @@ func main() {
 	}
 	stdin := bufio.NewReader(os.Stdin)
 	for {
-		ch, err := stdin.ReadByte()
-		if err == io.EOF {
-			break
-		}
+		ch, _ := stdin.ReadByte()
 		r := rune(ch)
 		if r == 'q' {
 			break
