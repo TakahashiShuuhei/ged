@@ -4,24 +4,29 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/pkg/term/termios"
+	"io"
 	"os"
 	"syscall"
 	"unicode"
 )
 
-func disableRawMode(term *syscall.Termios) error {
-	err := termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, term)
-	if err != nil {
-		return err
-	}
-	return nil
+func die(message string) {
+	fmt.Fprintf(os.Stderr, message)
+	os.Exit(1)
 }
 
-func enableRawMode(term *syscall.Termios) error {
+func disableRawMode(term *syscall.Termios) {
+	err := termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, term)
+	if err != nil {
+		die("tcsetattr")
+	}
+}
+
+func enableRawMode(term *syscall.Termios) {
 	newTerm := *term
 	err := termios.Tcgetattr(uintptr(syscall.Stdin), &newTerm)
 	if err != nil {
-		return err
+		die("tcgetattr")
 	}
 	newTerm.Iflag &^= syscall.BRKINT | syscall.ICRNL | syscall.INPCK | syscall.ISTRIP |  syscall.IXON
 	newTerm.Oflag &^= syscall.OPOST
@@ -30,33 +35,29 @@ func enableRawMode(term *syscall.Termios) error {
 	newTerm.Cc[syscall.VMIN] = 0
 	newTerm.Cc[syscall.VTIME] = 1
 	if err = termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, &newTerm); err != nil {
-		return err
+		die("tcsetattr")
 	}
-	return nil
 }
 
-func getTerm() (*syscall.Termios, error) {
+func getTerm() *syscall.Termios {
 	var term syscall.Termios
 	err := termios.Tcgetattr(uintptr(syscall.Stdin), &term)
 	if err != nil {
-		return nil, err
+		die("tcgetattr")
 	}
-	return &term, nil
+	return &term
 }
 
 func main() {
-	var term, err = getTerm()
-	if err != nil {
-		return
-	}
-	err = enableRawMode(term)
+	var term = getTerm()
+	enableRawMode(term)
 	defer disableRawMode(term)
-	if err != nil {
-		return
-	}
 	stdin := bufio.NewReader(os.Stdin)
 	for {
-		ch, _ := stdin.ReadByte()
+		ch, err := stdin.ReadByte()
+		if err != nil && err != io.EOF {
+			die("read")
+		}
 		r := rune(ch)
 		if r == 'q' {
 			break
