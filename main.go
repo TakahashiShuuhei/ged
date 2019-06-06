@@ -54,6 +54,10 @@ func getTerm() *syscall.Termios {
 	return &term
 }
 
+func editorRefreshScreen() {
+	fmt.Printf("\x1b[2J")
+}
+
 func editorReadKey(stdin *bufio.Reader) rune {
 	for {
 		ch, err := stdin.ReadByte()
@@ -85,6 +89,7 @@ func _main() int {
         defer disableRawMode(term)
         stdin := bufio.NewReader(os.Stdin)
         for {
+		editorRefreshScreen()
 		ret := editorProcessKeypress(stdin)
 		if ret != CONTINUE {
 			return ret
