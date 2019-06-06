@@ -10,6 +10,10 @@ import (
 	"unicode"
 )
 
+func controlKey(r rune) rune {
+	return r & 0x1f
+}
+
 func die(message string) {
 	fmt.Fprintf(os.Stderr, message)
 	os.Exit(1)
@@ -59,7 +63,7 @@ func main() {
 			die("read")
 		}
 		r := rune(ch)
-		if r == 'q' {
+		if r == controlKey('q') {
 			break
 		}
 		if unicode.IsControl(r) {
