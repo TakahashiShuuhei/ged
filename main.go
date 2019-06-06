@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"github.com/pkg/term/termios"
 	"os"
 	"syscall"
+	"unicode"
 )
 
 func disableRawMode(term *syscall.Termios) error {
@@ -57,6 +59,11 @@ func main() {
 		r := rune(ch)
 		if r == 'q' {
 			break
+		}
+		if unicode.IsControl(r) {
+			fmt.Printf("%d\n", r)
+		} else {
+			fmt.Printf("%d ('%c')\n", r, r)
 		}
 	}
 }
