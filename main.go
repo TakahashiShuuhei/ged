@@ -56,6 +56,7 @@ func getTerm() *syscall.Termios {
 
 func editorRefreshScreen() {
 	fmt.Printf("\x1b[2J")
+	fmt.Printf("\x1b[H")
 }
 
 func editorReadKey(stdin *bufio.Reader) rune {
