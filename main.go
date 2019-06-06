@@ -57,8 +57,18 @@ func getTerm() *syscall.Termios {
 	return &term
 }
 
+func editorDrawRows() {
+	for y := 0; y < 24; y++ {
+		fmt.Printf("~\r\n")
+	}
+}
+
 func editorRefreshScreen() {
 	fmt.Printf("\x1b[2J")
+	fmt.Printf("\x1b[H")
+
+	editorDrawRows()
+
 	fmt.Printf("\x1b[H")
 }
 
