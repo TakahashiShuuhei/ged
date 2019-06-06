@@ -24,6 +24,7 @@ func enableRawMode(term *syscall.Termios) error {
 	if err != nil {
 		return err
 	}
+	newTerm.Iflag &^= syscall.IXON
 	newTerm.Lflag &^= syscall.ECHO | syscall.ICANON | syscall.ISIG
 	if err = termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, &newTerm); err != nil {
 		return err
