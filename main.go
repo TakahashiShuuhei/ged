@@ -7,7 +7,9 @@ import (
 	"io"
 	"os"
 	"syscall"
-	"unicode"
+)
+const (
+	CONTINUE = -999
 )
 
 func controlKey(r rune) rune {
@@ -52,24 +54,42 @@ func getTerm() *syscall.Termios {
 	return &term
 }
 
-func main() {
-	var term = getTerm()
-	enableRawMode(term)
-	defer disableRawMode(term)
-	stdin := bufio.NewReader(os.Stdin)
+func editorReadKey(stdin *bufio.Reader) rune {
 	for {
 		ch, err := stdin.ReadByte()
 		if err != nil && err != io.EOF {
 			die("read")
 		}
-		r := rune(ch)
-		if r == controlKey('q') {
-			break
-		}
-		if unicode.IsControl(r) {
-			fmt.Printf("%d\r\n", r)
-		} else {
-			fmt.Printf("%d ('%c')\r\n", r, r)
-		}
+		return rune(ch)
 	}
+}
+
+func editorProcessKeypress(stdin *bufio.Reader) int {
+	r := editorReadKey(stdin)
+
+	switch r {
+		case controlKey('q'):
+			return 0
+		default:
+			return CONTINUE
+	}
+}
+
+func main() {
+	os.Exit(_main())
+}
+
+func _main() int {
+        var term = getTerm()
+        enableRawMode(term)
+        defer disableRawMode(term)
+        stdin := bufio.NewReader(os.Stdin)
+        for {
+		ret := editorProcessKeypress(stdin)
+		if ret != CONTINUE {
+			return ret
+		}
+        }
+	return 0
+
 }
