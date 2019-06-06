@@ -17,6 +17,9 @@ func controlKey(r rune) rune {
 }
 
 func die(message string) {
+        fmt.Printf("\x1b[2J")
+        fmt.Printf("\x1b[H")
+
 	fmt.Fprintf(os.Stderr, message)
 	os.Exit(1)
 }
@@ -74,6 +77,8 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 
 	switch r {
 		case controlKey('q'):
+		        fmt.Printf("\x1b[2J")
+		        fmt.Printf("\x1b[H")
 			return 0
 		default:
 			return CONTINUE
