@@ -25,6 +25,7 @@ func enableRawMode(term *syscall.Termios) error {
 		return err
 	}
 	newTerm.Iflag &^= syscall.ICRNL | syscall.IXON
+	newTerm.Oflag &^= syscall.OPOST
 	newTerm.Lflag &^= syscall.ECHO | syscall.ICANON | syscall.IEXTEN | syscall.ISIG
 	if err = termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, &newTerm); err != nil {
 		return err
@@ -62,9 +63,9 @@ func main() {
 			break
 		}
 		if unicode.IsControl(r) {
-			fmt.Printf("%d\n", r)
+			fmt.Printf("%d\r\n", r)
 		} else {
-			fmt.Printf("%d ('%c')\n", r, r)
+			fmt.Printf("%d ('%c')\r\n", r, r)
 		}
 	}
 }
