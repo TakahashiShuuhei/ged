@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/pkg/term/termios"
+	"github.com/olekukonko/ts"
 	"io"
 	"os"
 	"syscall"
@@ -13,6 +14,8 @@ const (
 )
 
 type EditorConfig struct {
+	screenRows int
+	screenCols int
 	origTermios syscall.Termios
 }
 
@@ -60,7 +63,7 @@ func getTerm() {
 }
 
 func editorDrawRows() {
-	for y := 0; y < 24; y++ {
+	for y := 0; y < E.screenRows; y++ {
 		fmt.Printf("~\r\n")
 	}
 }
@@ -84,6 +87,14 @@ func editorReadKey(stdin *bufio.Reader) rune {
 	}
 }
 
+func getWindowSize() (rows int, cols int, err error) {
+	s, err := ts.GetSize()
+	if err != nil {
+		return -1, -1, err
+	}
+	return int(s.Row()), int(s.Col()), nil
+}
+
 func editorProcessKeypress(stdin *bufio.Reader) int {
 	r := editorReadKey(stdin)
 
@@ -97,21 +108,31 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 	}
 }
 
+func initEditor() {
+	rows, cols, err := getWindowSize()
+	if err != nil {
+		die("getWindowSize")
+	}
+	E.screenRows = rows
+	E.screenCols = cols
+}
+
 func main() {
 	os.Exit(_main())
 }
 
 func _main() int {
-        getTerm()
-        enableRawMode()
-        defer disableRawMode()
-        stdin := bufio.NewReader(os.Stdin)
-        for {
+	getTerm()
+	enableRawMode()
+	defer disableRawMode()
+	initEditor()
+	stdin := bufio.NewReader(os.Stdin)
+	for {
 		editorRefreshScreen()
 		ret := editorProcessKeypress(stdin)
 		if ret != CONTINUE {
 			return ret
 		}
-        }
+	}
 	return 0
 }
