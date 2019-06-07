@@ -12,6 +12,14 @@ const (
 	CONTINUE = -999
 )
 
+type EditorConfig struct {
+	origTermios syscall.Termios
+}
+
+var E EditorConfig = EditorConfig{
+	origTermios: syscall.Termios{},
+}
+
 func controlKey(r rune) rune {
 	return r & 0x1f
 }
@@ -24,37 +32,31 @@ func die(message string) {
 	os.Exit(1)
 }
 
-func disableRawMode(term *syscall.Termios) {
-	err := termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, term)
+func disableRawMode() {
+	err := termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, &E.origTermios)
 	if err != nil {
 		die("tcsetattr")
 	}
 }
 
-func enableRawMode(term *syscall.Termios) {
-	newTerm := *term
-	err := termios.Tcgetattr(uintptr(syscall.Stdin), &newTerm)
-	if err != nil {
-		die("tcgetattr")
-	}
+func enableRawMode() {
+	newTerm := E.origTermios
 	newTerm.Iflag &^= syscall.BRKINT | syscall.ICRNL | syscall.INPCK | syscall.ISTRIP |  syscall.IXON
 	newTerm.Oflag &^= syscall.OPOST
 	newTerm.Cflag |= syscall.CS8
 	newTerm.Lflag &^= syscall.ECHO | syscall.ICANON | syscall.IEXTEN | syscall.ISIG
 	newTerm.Cc[syscall.VMIN] = 0
 	newTerm.Cc[syscall.VTIME] = 1
-	if err = termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, &newTerm); err != nil {
+	if err := termios.Tcsetattr(uintptr(syscall.Stdin), termios.TCSAFLUSH, &newTerm); err != nil {
 		die("tcsetattr")
 	}
 }
 
-func getTerm() *syscall.Termios {
-	var term syscall.Termios
-	err := termios.Tcgetattr(uintptr(syscall.Stdin), &term)
+func getTerm() {
+	err := termios.Tcgetattr(uintptr(syscall.Stdin), &E.origTermios)
 	if err != nil {
 		die("tcgetattr")
 	}
-	return &term
 }
 
 func editorDrawRows() {
@@ -100,9 +102,9 @@ func main() {
 }
 
 func _main() int {
-        var term = getTerm()
-        enableRawMode(term)
-        defer disableRawMode(term)
+        getTerm()
+        enableRawMode()
+        defer disableRawMode()
         stdin := bufio.NewReader(os.Stdin)
         for {
 		editorRefreshScreen()
@@ -112,5 +114,4 @@ func _main() int {
 		}
         }
 	return 0
-
 }
