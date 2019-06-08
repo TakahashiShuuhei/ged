@@ -12,6 +12,10 @@ import (
 const (
 	CONTINUE = -999
 	GED_VERSION = "0.0.1"
+	ARROW_LEFT = 1000
+	ARROW_RIGHT = 1001
+	ARROW_UP = 1002
+	ARROW_DOWN = 1003
 )
 
 type EditorConfig struct {
@@ -127,7 +131,32 @@ func editorReadKey(stdin *bufio.Reader) rune {
 		if err != nil && err != io.EOF {
 			die("read")
 		}
-		return rune(ch)
+
+		r := rune(ch)
+
+		if r == '\x1b' {
+			ch, err = stdin.ReadByte()
+			if err != nil && err != io.EOF {
+				return r
+			}
+			r1 := rune(ch)
+			ch, err = stdin.ReadByte()
+			if err != nil && err != io.EOF {
+				return r
+			}
+			r2 := rune(ch)
+
+			if r1 == '[' {
+				switch r2 {
+					case 'A': return ARROW_UP
+					case 'B': return ARROW_DOWN
+					case 'C': return ARROW_RIGHT
+					case 'D': return ARROW_LEFT
+				}
+			}
+			return r
+		}
+		return r
 	}
 }
 
@@ -141,13 +170,13 @@ func getWindowSize() (rows int, cols int, err error) {
 
 func editorMoveCursor(key rune) {
 	switch key {
-		case 'a':
+		case ARROW_LEFT:
 			E.cx--
-		case 'd':
+		case ARROW_RIGHT:
 			E.cx++
-		case 'w':
+		case ARROW_UP:
 			E.cy--
-		case 's':
+		case ARROW_DOWN:
 			E.cy++
 	}
 }
@@ -159,13 +188,13 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 		        fmt.Printf("\x1b[2J")
 		        fmt.Printf("\x1b[H")
 			return 0
-		case 'w':
+		case ARROW_UP:
 			fallthrough
-		case 's':
+		case ARROW_DOWN:
 			fallthrough
-		case 'a':
+		case ARROW_LEFT:
 			fallthrough
-		case 'd':
+		case ARROW_RIGHT:
 			editorMoveCursor(r)
 			return CONTINUE
 		default:
