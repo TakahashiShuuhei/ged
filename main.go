@@ -11,6 +11,7 @@ import (
 )
 const (
 	CONTINUE = -999
+	GED_VERSION = "0.0.1"
 )
 
 type EditorConfig struct {
@@ -76,7 +77,15 @@ func getTerm() {
 
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < E.screenRows; y++ {
-		abAppend(ab, "~")
+		if y == E.screenRows / 3 {
+			welcome := fmt.Sprintf("GED editor -- version %s", GED_VERSION)
+			if len(welcome) > E.screenCols {
+				welcome = welcome[:E.screenCols]
+			}
+			abAppend(ab, welcome)
+		} else {
+			abAppend(ab, "~")
+		}
 
 		abAppend(ab, "\x1b[K")
 		if y < E.screenRows - 1 {
