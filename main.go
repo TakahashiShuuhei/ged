@@ -86,12 +86,14 @@ func editorDrawRows(ab *abuf) {
 func editorRefreshScreen() {
 	ab := abuf{}
 
+	abAppend(&ab, "\x1b[?25l")
 	abAppend(&ab, "\x1b[2J")
 	abAppend(&ab, "\x1b[H")
 
 	editorDrawRows(&ab)
 
 	abAppend(&ab, "\x1b[H")
+	abAppend(&ab, "\x1b[?25h")
 
 	fmt.Printf(ab.b)
 	abFree(&ab)
