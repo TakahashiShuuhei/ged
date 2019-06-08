@@ -16,6 +16,8 @@ const (
 	ARROW_RIGHT = 1001
 	ARROW_UP = 1002
 	ARROW_DOWN = 1003
+	PAGE_UP = 1004
+	PAGE_DOWN = 1005
 )
 
 type EditorConfig struct {
@@ -147,11 +149,25 @@ func editorReadKey(stdin *bufio.Reader) rune {
 			r2 := rune(ch)
 
 			if r1 == '[' {
-				switch r2 {
-					case 'A': return ARROW_UP
-					case 'B': return ARROW_DOWN
-					case 'C': return ARROW_RIGHT
-					case 'D': return ARROW_LEFT
+				if r2 >= '0' && r2 <= '9' {
+					ch, err = stdin.ReadByte()
+					if err != nil && err != io.EOF {
+						return r
+					}
+					r3 := rune(ch)
+					if r3 == '~' {
+						switch r2 {
+							case '5': return PAGE_UP
+							case '6': return PAGE_DOWN
+						}
+					}
+				} else {
+					switch r2 {
+						case 'A': return ARROW_UP
+						case 'B': return ARROW_DOWN
+						case 'C': return ARROW_RIGHT
+						case 'D': return ARROW_LEFT
+					}
 				}
 			}
 			return r
@@ -196,6 +212,18 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 		        fmt.Printf("\x1b[2J")
 		        fmt.Printf("\x1b[H")
 			return 0
+		case PAGE_UP:
+			fallthrough
+		case PAGE_DOWN:
+			times := E.screenRows
+			move := rune(ARROW_UP)
+			if r == PAGE_DOWN {
+				move = rune(ARROW_DOWN)
+			}
+			for i := 0; i < times; i++ {
+				editorMoveCursor(move)
+			}
+			return CONTINUE
 		case ARROW_UP:
 			fallthrough
 		case ARROW_DOWN:
