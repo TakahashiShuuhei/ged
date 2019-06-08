@@ -16,8 +16,10 @@ const (
 	ARROW_RIGHT = 1001
 	ARROW_UP = 1002
 	ARROW_DOWN = 1003
-	PAGE_UP = 1004
-	PAGE_DOWN = 1005
+	HOME_KEY = 1004
+	END_KEY = 1005
+	PAGE_UP = 1006
+	PAGE_DOWN = 1007
 )
 
 type EditorConfig struct {
@@ -157,8 +159,12 @@ func editorReadKey(stdin *bufio.Reader) rune {
 					r3 := rune(ch)
 					if r3 == '~' {
 						switch r2 {
+							case '1': return HOME_KEY
+							case '4': return END_KEY
 							case '5': return PAGE_UP
 							case '6': return PAGE_DOWN
+							case '7': return HOME_KEY
+							case '8': return END_KEY
 						}
 					}
 				} else {
@@ -167,7 +173,14 @@ func editorReadKey(stdin *bufio.Reader) rune {
 						case 'B': return ARROW_DOWN
 						case 'C': return ARROW_RIGHT
 						case 'D': return ARROW_LEFT
+						case 'H': return HOME_KEY
+						case 'F': return END_KEY
 					}
+				}
+			} else if r1 == 'O' {
+				switch r2 {
+					case 'H': return HOME_KEY
+					case 'F': return END_KEY
 				}
 			}
 			return r
@@ -212,6 +225,12 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 		        fmt.Printf("\x1b[2J")
 		        fmt.Printf("\x1b[H")
 			return 0
+		case HOME_KEY:
+			E.cx = 0
+			return CONTINUE
+		case END_KEY:
+			E.cx = E.screenCols - 1
+			return CONTINUE
 		case PAGE_UP:
 			fallthrough
 		case PAGE_DOWN:
