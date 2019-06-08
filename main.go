@@ -19,6 +19,18 @@ type EditorConfig struct {
 	origTermios syscall.Termios
 }
 
+type abuf struct {
+	b string
+}
+
+func abAppend(ab *abuf, s string) {
+	ab.b += s
+}
+
+func abFree(ab *abuf) {
+	ab.b = ""
+}
+
 var E EditorConfig = EditorConfig{
 	origTermios: syscall.Termios{},
 }
@@ -62,22 +74,27 @@ func getTerm() {
 	}
 }
 
-func editorDrawRows() {
+func editorDrawRows(ab *abuf) {
 	for y := 0; y < E.screenRows; y++ {
-		fmt.Printf("~")
+		abAppend(ab, "~")
 		if y < E.screenRows - 1 {
-			fmt.Printf("\r\n")
+			abAppend(ab, "\r\n")
 		}
 	}
 }
 
 func editorRefreshScreen() {
-	fmt.Printf("\x1b[2J")
-	fmt.Printf("\x1b[H")
+	ab := abuf{}
 
-	editorDrawRows()
+	abAppend(&ab, "\x1b[2J")
+	abAppend(&ab, "\x1b[H")
 
-	fmt.Printf("\x1b[H")
+	editorDrawRows(&ab)
+
+	abAppend(&ab, "\x1b[H")
+
+	fmt.Printf(ab.b)
+	abFree(&ab)
 }
 
 func editorReadKey(stdin *bufio.Reader) rune {
