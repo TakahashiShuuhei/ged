@@ -15,6 +15,8 @@ const (
 )
 
 type EditorConfig struct {
+	cx int
+	cy int
 	screenRows int
 	screenCols int
 	origTermios syscall.Termios
@@ -110,7 +112,9 @@ func editorRefreshScreen() {
 
 	editorDrawRows(&ab)
 
-	abAppend(&ab, "\x1b[H")
+	buf := fmt.Sprintf("\x1b[%d;%dH", E.cy + 1, E.cx + 1)
+	abAppend(&ab, buf)
+
 	abAppend(&ab, "\x1b[?25h")
 
 	fmt.Printf(ab.b)
@@ -135,20 +139,43 @@ func getWindowSize() (rows int, cols int, err error) {
 	return int(s.Row()), int(s.Col()), nil
 }
 
+func editorMoveCursor(key rune) {
+	switch key {
+		case 'a':
+			E.cx--
+		case 'd':
+			E.cx++
+		case 'w':
+			E.cy--
+		case 's':
+			E.cy++
+	}
+}
+
 func editorProcessKeypress(stdin *bufio.Reader) int {
 	r := editorReadKey(stdin)
-
 	switch r {
 		case controlKey('q'):
 		        fmt.Printf("\x1b[2J")
 		        fmt.Printf("\x1b[H")
 			return 0
+		case 'w':
+			fallthrough
+		case 's':
+			fallthrough
+		case 'a':
+			fallthrough
+		case 'd':
+			editorMoveCursor(r)
+			return CONTINUE
 		default:
 			return CONTINUE
 	}
 }
 
 func initEditor() {
+	E.cx = 0
+	E.cy = 0
 	rows, cols, err := getWindowSize()
 	if err != nil {
 		die("getWindowSize")
