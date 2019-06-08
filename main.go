@@ -64,7 +64,10 @@ func getTerm() {
 
 func editorDrawRows() {
 	for y := 0; y < E.screenRows; y++ {
-		fmt.Printf("~\r\n")
+		fmt.Printf("~")
+		if y < E.screenRows - 1 {
+			fmt.Printf("\r\n")
+		}
 	}
 }
 
