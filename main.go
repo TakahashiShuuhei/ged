@@ -16,10 +16,11 @@ const (
 	ARROW_RIGHT = 1001
 	ARROW_UP = 1002
 	ARROW_DOWN = 1003
-	HOME_KEY = 1004
-	END_KEY = 1005
-	PAGE_UP = 1006
-	PAGE_DOWN = 1007
+	DEL_KEY = 1004
+	HOME_KEY = 1005
+	END_KEY = 1006
+	PAGE_UP = 1007
+	PAGE_DOWN = 1008
 )
 
 type EditorConfig struct {
@@ -160,6 +161,7 @@ func editorReadKey(stdin *bufio.Reader) rune {
 					if r3 == '~' {
 						switch r2 {
 							case '1': return HOME_KEY
+							case '3': return DEL_KEY
 							case '4': return END_KEY
 							case '5': return PAGE_UP
 							case '6': return PAGE_DOWN
