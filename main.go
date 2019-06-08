@@ -82,6 +82,14 @@ func editorDrawRows(ab *abuf) {
 			if len(welcome) > E.screenCols {
 				welcome = welcome[:E.screenCols]
 			}
+			padding := (E.screenCols - len(welcome)) / 2
+			if padding > 0 {
+				abAppend(ab, "~")
+				padding--
+			}
+			for i := 0; i < padding; i++ {
+				abAppend(ab, " ")
+			}
 			abAppend(ab, welcome)
 		} else {
 			abAppend(ab, "~")
