@@ -77,6 +77,8 @@ func getTerm() {
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < E.screenRows; y++ {
 		abAppend(ab, "~")
+
+		abAppend(ab, "\x1b[K")
 		if y < E.screenRows - 1 {
 			abAppend(ab, "\r\n")
 		}
@@ -87,7 +89,6 @@ func editorRefreshScreen() {
 	ab := abuf{}
 
 	abAppend(&ab, "\x1b[?25l")
-	abAppend(&ab, "\x1b[2J")
 	abAppend(&ab, "\x1b[H")
 
 	editorDrawRows(&ab)
