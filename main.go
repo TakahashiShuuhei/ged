@@ -27,6 +27,7 @@ const (
 type EditorConfig struct {
 	cx int
 	cy int
+	rowoff int
 	screenRows int
 	screenCols int
 	row []erow
@@ -92,9 +93,20 @@ func getTerm() {
 	}
 }
 
+func editorScroll() {
+	if E.cy < E.rowoff {
+		E.rowoff = E.cy
+	}
+
+	if E.cy >= E.rowoff + E.screenRows {
+		E.rowoff = E.cy - E.screenRows + 1
+	}
+}
+
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < E.screenRows; y++ {
-		if y >= len(E.row) {
+		filerow := y + E.rowoff
+		if filerow >= len(E.row) {
 			if len(E.row) == 0 && y == E.screenRows / 3 {
 				welcome := fmt.Sprintf("GED editor -- version %s", GED_VERSION)
 				if len(welcome) > E.screenCols {
@@ -113,8 +125,8 @@ func editorDrawRows(ab *abuf) {
 				abAppend(ab, "~")
 			}
 		} else {
-			line := E.row[y].chars
-			if len(E.row[y].chars) > E.screenCols {
+			line := E.row[filerow].chars
+			if len(line) > E.screenCols {
 				line = line[:E.screenCols]
 			}
 			abAppend(ab, line)
@@ -128,6 +140,8 @@ func editorDrawRows(ab *abuf) {
 }
 
 func editorRefreshScreen() {
+	editorScroll()
+
 	ab := abuf{}
 
 	abAppend(&ab, "\x1b[?25l")
@@ -135,7 +149,7 @@ func editorRefreshScreen() {
 
 	editorDrawRows(&ab)
 
-	buf := fmt.Sprintf("\x1b[%d;%dH", E.cy + 1, E.cx + 1)
+	buf := fmt.Sprintf("\x1b[%d;%dH", E.cy - E.rowoff + 1, E.cx + 1)
 	abAppend(&ab, buf)
 
 	abAppend(&ab, "\x1b[?25h")
@@ -256,7 +270,7 @@ func editorMoveCursor(key rune) {
 				E.cy--
 			}
 		case ARROW_DOWN:
-			if E.cy != E.screenRows - 1 {
+			if E.cy < len(E.row) {
 				E.cy++
 			}
 	}
@@ -304,6 +318,7 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 func initEditor() {
 	E.cx = 0
 	E.cy = 0
+	E.rowoff = 0
 	E.row = nil
 	rows, cols, err := getWindowSize()
 	if err != nil {
