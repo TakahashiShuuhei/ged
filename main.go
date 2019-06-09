@@ -276,6 +276,9 @@ func editorMoveCursor(key rune) {
 		case ARROW_LEFT:
 			if E.cx != 0 {
 				E.cx--
+			} else if E.cy > 0 {
+				E.cy--
+				E.cx = len(E.row[E.cy].chars)
 			}
 		case ARROW_RIGHT:
 			if row != nil && E.cx < len(row.chars) {
