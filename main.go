@@ -290,6 +290,18 @@ func editorMoveCursor(key rune) {
 				E.cy++
 			}
 	}
+
+	row = nil
+	if E.cy < len(E.row) {
+		row = &E.row[E.cy]
+	}
+	rowlen := 0
+	if row != nil {
+		rowlen = len(row.chars)
+	}
+	if E.cx > rowlen {
+		E.cx = rowlen
+	}
 }
 
 func editorProcessKeypress(stdin *bufio.Reader) int {
