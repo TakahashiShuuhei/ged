@@ -29,7 +29,7 @@ type EditorConfig struct {
 	cy int
 	screenRows int
 	screenCols int
-	row erow
+	row []erow
 	origTermios syscall.Termios
 }
 
@@ -94,31 +94,30 @@ func getTerm() {
 
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < E.screenRows; y++ {
-		if y >= 1 {
-		if len(E.row.chars) == 0 && y == E.screenRows / 3 {
-			welcome := fmt.Sprintf("GED editor -- version %s", GED_VERSION)
-			if len(welcome) > E.screenCols {
-				welcome = welcome[:E.screenCols]
-			}
-			padding := (E.screenCols - len(welcome)) / 2
-			if padding > 0 {
+		if y >= len(E.row) {
+			if len(E.row) == 0 && y == E.screenRows / 3 {
+				welcome := fmt.Sprintf("GED editor -- version %s", GED_VERSION)
+				if len(welcome) > E.screenCols {
+					welcome = welcome[:E.screenCols]
+				}
+				padding := (E.screenCols - len(welcome)) / 2
+				if padding > 0 {
+					abAppend(ab, "~")
+					padding--
+				}
+				for i := 0; i < padding; i++ {
+					abAppend(ab, " ")
+				}
+				abAppend(ab, welcome)
+			} else {
 				abAppend(ab, "~")
-				padding--
 			}
-			for i := 0; i < padding; i++ {
-				abAppend(ab, " ")
-			}
-			abAppend(ab, welcome)
 		} else {
-			abAppend(ab, "~")
-		}
-		} else {
-			line := E.row.chars
-			if len(E.row.chars) > E.screenCols {
+			line := E.row[y].chars
+			if len(E.row[y].chars) > E.screenCols {
 				line = line[:E.screenCols]
 			}
-			abAppend(ab, E.row.chars)
-
+			abAppend(ab, line)
 		}
 
 		abAppend(ab, "\x1b[K")
@@ -214,6 +213,11 @@ func getWindowSize() (rows int, cols int, err error) {
 	return int(s.Row()), int(s.Col()), nil
 }
 
+func editorAppendRow(s string) {
+	r := erow{chars: s}
+	E.row = append(E.row, r)
+}
+
 func editorOpen(filename string) {
 	f, err := os.Open(filename)
 	defer f.Close()
@@ -221,15 +225,20 @@ func editorOpen(filename string) {
 		die("Open")
 	}
 	reader := bufio.NewReader(f)
-	bs, _, err := reader.ReadLine()
-	if err != nil {
-		die("ReadLine")
-	}
-	line := fmt.Sprintf("%s", bs)
-	line = strings.Replace(line, "\r", "", -1)
-	line = strings.Replace(line, "\n", "", -1)
+	for {
+		bs, _, err := reader.ReadLine()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			die("ReadLine")
+		}
+		line := fmt.Sprintf("%s", bs)
+		line = strings.Replace(line, "\r", "", -1)
+		line = strings.Replace(line, "\n", "", -1)
 
-	E.row.chars = line
+		editorAppendRow(line)
+	}
 }
 
 func editorMoveCursor(key rune) {
@@ -295,6 +304,7 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 func initEditor() {
 	E.cx = 0
 	E.cy = 0
+	E.row = nil
 	rows, cols, err := getWindowSize()
 	if err != nil {
 		die("getWindowSize")
