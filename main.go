@@ -7,6 +7,7 @@ import (
 	"github.com/olekukonko/ts"
 	"io"
 	"os"
+	"strings"
 	"syscall"
 )
 const (
@@ -28,11 +29,16 @@ type EditorConfig struct {
 	cy int
 	screenRows int
 	screenCols int
+	row erow
 	origTermios syscall.Termios
 }
 
 type abuf struct {
 	b string
+}
+
+type erow struct {
+	chars string
 }
 
 func abAppend(ab *abuf, s string) {
@@ -88,7 +94,8 @@ func getTerm() {
 
 func editorDrawRows(ab *abuf) {
 	for y := 0; y < E.screenRows; y++ {
-		if y == E.screenRows / 3 {
+		if y >= 1 {
+		if len(E.row.chars) == 0 && y == E.screenRows / 3 {
 			welcome := fmt.Sprintf("GED editor -- version %s", GED_VERSION)
 			if len(welcome) > E.screenCols {
 				welcome = welcome[:E.screenCols]
@@ -104,6 +111,14 @@ func editorDrawRows(ab *abuf) {
 			abAppend(ab, welcome)
 		} else {
 			abAppend(ab, "~")
+		}
+		} else {
+			line := E.row.chars
+			if len(E.row.chars) > E.screenCols {
+				line = line[:E.screenCols]
+			}
+			abAppend(ab, E.row.chars)
+
 		}
 
 		abAppend(ab, "\x1b[K")
@@ -199,6 +214,24 @@ func getWindowSize() (rows int, cols int, err error) {
 	return int(s.Row()), int(s.Col()), nil
 }
 
+func editorOpen(filename string) {
+	f, err := os.Open(filename)
+	defer f.Close()
+	if err != nil {
+		die("Open")
+	}
+	reader := bufio.NewReader(f)
+	bs, _, err := reader.ReadLine()
+	if err != nil {
+		die("ReadLine")
+	}
+	line := fmt.Sprintf("%s", bs)
+	line = strings.Replace(line, "\r", "", -1)
+	line = strings.Replace(line, "\n", "", -1)
+
+	E.row.chars = line
+}
+
 func editorMoveCursor(key rune) {
 	switch key {
 		case ARROW_LEFT:
@@ -279,6 +312,9 @@ func _main() int {
 	enableRawMode()
 	defer disableRawMode()
 	initEditor()
+	if len(os.Args) >= 2 {
+		editorOpen(os.Args[1])
+	}
 	stdin := bufio.NewReader(os.Stdin)
 	for {
 		editorRefreshScreen()
