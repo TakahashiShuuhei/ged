@@ -28,6 +28,7 @@ type EditorConfig struct {
 	cx int
 	cy int
 	rowoff int
+	coloff int
 	screenRows int
 	screenCols int
 	row []erow
@@ -101,6 +102,14 @@ func editorScroll() {
 	if E.cy >= E.rowoff + E.screenRows {
 		E.rowoff = E.cy - E.screenRows + 1
 	}
+
+	if E.cx < E.coloff {
+		E.coloff = E.cx
+	}
+
+	if E.cx >= E.coloff + E.screenCols {
+		E.coloff = E.cx - E.screenCols + 1
+	}
 }
 
 func editorDrawRows(ab *abuf) {
@@ -125,7 +134,10 @@ func editorDrawRows(ab *abuf) {
 				abAppend(ab, "~")
 			}
 		} else {
-			line := E.row[filerow].chars
+			line := ""
+			if len(E.row[filerow].chars) > E.coloff {
+				line = E.row[filerow].chars[E.coloff:]
+			}
 			if len(line) > E.screenCols {
 				line = line[:E.screenCols]
 			}
@@ -149,7 +161,7 @@ func editorRefreshScreen() {
 
 	editorDrawRows(&ab)
 
-	buf := fmt.Sprintf("\x1b[%d;%dH", E.cy - E.rowoff + 1, E.cx + 1)
+	buf := fmt.Sprintf("\x1b[%d;%dH", E.cy - E.rowoff + 1, E.cx - E.coloff + 1)
 	abAppend(&ab, buf)
 
 	abAppend(&ab, "\x1b[?25h")
@@ -256,13 +268,17 @@ func editorOpen(filename string) {
 }
 
 func editorMoveCursor(key rune) {
+	var row *erow = nil
+	if E.cy < len(E.row) {
+		row = &E.row[E.cy]
+	}
 	switch key {
 		case ARROW_LEFT:
 			if E.cx != 0 {
 				E.cx--
 			}
 		case ARROW_RIGHT:
-			if E.cx != E.screenCols - 1 {
+			if row != nil && E.cx < len(row.chars) {
 				E.cx++
 			}
 		case ARROW_UP:
@@ -319,6 +335,7 @@ func initEditor() {
 	E.cx = 0
 	E.cy = 0
 	E.rowoff = 0
+	E.coloff = 0
 	E.row = nil
 	rows, cols, err := getWindowSize()
 	if err != nil {
