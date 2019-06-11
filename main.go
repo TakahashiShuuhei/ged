@@ -3,35 +3,37 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/pkg/term/termios"
 	"github.com/olekukonko/ts"
+	"github.com/pkg/term/termios"
 	"io"
 	"os"
 	"strings"
 	"syscall"
 )
+
 const (
-	CONTINUE = -999
+	GED_TAB_STOP = 8
+	CONTINUE    = -999
 	GED_VERSION = "0.0.1"
-	ARROW_LEFT = 1000
+	ARROW_LEFT  = 1000
 	ARROW_RIGHT = 1001
-	ARROW_UP = 1002
-	ARROW_DOWN = 1003
-	DEL_KEY = 1004
-	HOME_KEY = 1005
-	END_KEY = 1006
-	PAGE_UP = 1007
-	PAGE_DOWN = 1008
+	ARROW_UP    = 1002
+	ARROW_DOWN  = 1003
+	DEL_KEY     = 1004
+	HOME_KEY    = 1005
+	END_KEY     = 1006
+	PAGE_UP     = 1007
+	PAGE_DOWN   = 1008
 )
 
 type EditorConfig struct {
-	cx int
-	cy int
-	rowoff int
-	coloff int
-	screenRows int
-	screenCols int
-	row []erow
+	cx          int
+	cy          int
+	rowoff      int
+	coloff      int
+	screenRows  int
+	screenCols  int
+	row         []erow
 	origTermios syscall.Termios
 }
 
@@ -40,7 +42,8 @@ type abuf struct {
 }
 
 type erow struct {
-	chars string
+	chars  string
+	render string
 }
 
 func abAppend(ab *abuf, s string) {
@@ -60,8 +63,8 @@ func controlKey(r rune) rune {
 }
 
 func die(message string) {
-        fmt.Printf("\x1b[2J")
-        fmt.Printf("\x1b[H")
+	fmt.Printf("\x1b[2J")
+	fmt.Printf("\x1b[H")
 
 	fmt.Fprintf(os.Stderr, message)
 	os.Exit(1)
@@ -76,7 +79,7 @@ func disableRawMode() {
 
 func enableRawMode() {
 	newTerm := E.origTermios
-	newTerm.Iflag &^= syscall.BRKINT | syscall.ICRNL | syscall.INPCK | syscall.ISTRIP |  syscall.IXON
+	newTerm.Iflag &^= syscall.BRKINT | syscall.ICRNL | syscall.INPCK | syscall.ISTRIP | syscall.IXON
 	newTerm.Oflag &^= syscall.OPOST
 	newTerm.Cflag |= syscall.CS8
 	newTerm.Lflag &^= syscall.ECHO | syscall.ICANON | syscall.IEXTEN | syscall.ISIG
@@ -99,7 +102,7 @@ func editorScroll() {
 		E.rowoff = E.cy
 	}
 
-	if E.cy >= E.rowoff + E.screenRows {
+	if E.cy >= E.rowoff+E.screenRows {
 		E.rowoff = E.cy - E.screenRows + 1
 	}
 
@@ -107,7 +110,7 @@ func editorScroll() {
 		E.coloff = E.cx
 	}
 
-	if E.cx >= E.coloff + E.screenCols {
+	if E.cx >= E.coloff+E.screenCols {
 		E.coloff = E.cx - E.screenCols + 1
 	}
 }
@@ -116,7 +119,7 @@ func editorDrawRows(ab *abuf) {
 	for y := 0; y < E.screenRows; y++ {
 		filerow := y + E.rowoff
 		if filerow >= len(E.row) {
-			if len(E.row) == 0 && y == E.screenRows / 3 {
+			if len(E.row) == 0 && y == E.screenRows/3 {
 				welcome := fmt.Sprintf("GED editor -- version %s", GED_VERSION)
 				if len(welcome) > E.screenCols {
 					welcome = welcome[:E.screenCols]
@@ -135,8 +138,8 @@ func editorDrawRows(ab *abuf) {
 			}
 		} else {
 			line := ""
-			if len(E.row[filerow].chars) > E.coloff {
-				line = E.row[filerow].chars[E.coloff:]
+			if len(E.row[filerow].render) > E.coloff {
+				line = E.row[filerow].render[E.coloff:]
 			}
 			if len(line) > E.screenCols {
 				line = line[:E.screenCols]
@@ -145,7 +148,7 @@ func editorDrawRows(ab *abuf) {
 		}
 
 		abAppend(ab, "\x1b[K")
-		if y < E.screenRows - 1 {
+		if y < E.screenRows-1 {
 			abAppend(ab, "\r\n")
 		}
 	}
@@ -161,7 +164,7 @@ func editorRefreshScreen() {
 
 	editorDrawRows(&ab)
 
-	buf := fmt.Sprintf("\x1b[%d;%dH", E.cy - E.rowoff + 1, E.cx - E.coloff + 1)
+	buf := fmt.Sprintf("\x1b[%d;%dH", E.cy-E.rowoff+1, E.cx-E.coloff+1)
 	abAppend(&ab, buf)
 
 	abAppend(&ab, "\x1b[?25h")
@@ -200,29 +203,44 @@ func editorReadKey(stdin *bufio.Reader) rune {
 					r3 := rune(ch)
 					if r3 == '~' {
 						switch r2 {
-							case '1': return HOME_KEY
-							case '3': return DEL_KEY
-							case '4': return END_KEY
-							case '5': return PAGE_UP
-							case '6': return PAGE_DOWN
-							case '7': return HOME_KEY
-							case '8': return END_KEY
+						case '1':
+							return HOME_KEY
+						case '3':
+							return DEL_KEY
+						case '4':
+							return END_KEY
+						case '5':
+							return PAGE_UP
+						case '6':
+							return PAGE_DOWN
+						case '7':
+							return HOME_KEY
+						case '8':
+							return END_KEY
 						}
 					}
 				} else {
 					switch r2 {
-						case 'A': return ARROW_UP
-						case 'B': return ARROW_DOWN
-						case 'C': return ARROW_RIGHT
-						case 'D': return ARROW_LEFT
-						case 'H': return HOME_KEY
-						case 'F': return END_KEY
+					case 'A':
+						return ARROW_UP
+					case 'B':
+						return ARROW_DOWN
+					case 'C':
+						return ARROW_RIGHT
+					case 'D':
+						return ARROW_LEFT
+					case 'H':
+						return HOME_KEY
+					case 'F':
+						return END_KEY
 					}
 				}
 			} else if r1 == 'O' {
 				switch r2 {
-					case 'H': return HOME_KEY
-					case 'F': return END_KEY
+				case 'H':
+					return HOME_KEY
+				case 'F':
+					return END_KEY
 				}
 			}
 			return r
@@ -239,8 +257,28 @@ func getWindowSize() (rows int, cols int, err error) {
 	return int(s.Row()), int(s.Col()), nil
 }
 
+func editorUpdateRow(row *erow) {
+	idx := 0
+	var buf []byte
+	for j := 0; j < len(row.chars); j++ {
+		if row.chars[j] == '\t' {
+			idx++
+			buf = append(buf, ' ')
+			for idx % GED_TAB_STOP != 0 {
+				idx++
+				buf = append(buf, ' ')
+			}
+		} else {
+			idx++
+			buf = append(buf, row.chars[j])
+		}
+	}
+	row.render = string(buf)
+}
+
 func editorAppendRow(s string) {
 	r := erow{chars: s}
+	editorUpdateRow(&r)
 	E.row = append(E.row, r)
 }
 
@@ -273,28 +311,28 @@ func editorMoveCursor(key rune) {
 		row = &E.row[E.cy]
 	}
 	switch key {
-		case ARROW_LEFT:
-			if E.cx != 0 {
-				E.cx--
-			} else if E.cy > 0 {
-				E.cy--
-				E.cx = len(E.row[E.cy].chars)
-			}
-		case ARROW_RIGHT:
-			if row != nil && E.cx < len(row.chars) {
-				E.cx++
-			} else if row != nil && E.cx == len(row.chars) {
-				E.cy++
-				E.cx = 0
-			}
-		case ARROW_UP:
-			if E.cy != 0 {
-				E.cy--
-			}
-		case ARROW_DOWN:
-			if E.cy < len(E.row) {
-				E.cy++
-			}
+	case ARROW_LEFT:
+		if E.cx != 0 {
+			E.cx--
+		} else if E.cy > 0 {
+			E.cy--
+			E.cx = len(E.row[E.cy].chars)
+		}
+	case ARROW_RIGHT:
+		if row != nil && E.cx < len(row.chars) {
+			E.cx++
+		} else if row != nil && E.cx == len(row.chars) {
+			E.cy++
+			E.cx = 0
+		}
+	case ARROW_UP:
+		if E.cy != 0 {
+			E.cy--
+		}
+	case ARROW_DOWN:
+		if E.cy < len(E.row) {
+			E.cy++
+		}
 	}
 
 	row = nil
@@ -313,39 +351,39 @@ func editorMoveCursor(key rune) {
 func editorProcessKeypress(stdin *bufio.Reader) int {
 	r := editorReadKey(stdin)
 	switch r {
-		case controlKey('q'):
-		        fmt.Printf("\x1b[2J")
-		        fmt.Printf("\x1b[H")
-			return 0
-		case HOME_KEY:
-			E.cx = 0
-			return CONTINUE
-		case END_KEY:
-			E.cx = E.screenCols - 1
-			return CONTINUE
-		case PAGE_UP:
-			fallthrough
-		case PAGE_DOWN:
-			times := E.screenRows
-			move := rune(ARROW_UP)
-			if r == PAGE_DOWN {
-				move = rune(ARROW_DOWN)
-			}
-			for i := 0; i < times; i++ {
-				editorMoveCursor(move)
-			}
-			return CONTINUE
-		case ARROW_UP:
-			fallthrough
-		case ARROW_DOWN:
-			fallthrough
-		case ARROW_LEFT:
-			fallthrough
-		case ARROW_RIGHT:
-			editorMoveCursor(r)
-			return CONTINUE
-		default:
-			return CONTINUE
+	case controlKey('q'):
+		fmt.Printf("\x1b[2J")
+		fmt.Printf("\x1b[H")
+		return 0
+	case HOME_KEY:
+		E.cx = 0
+		return CONTINUE
+	case END_KEY:
+		E.cx = E.screenCols - 1
+		return CONTINUE
+	case PAGE_UP:
+		fallthrough
+	case PAGE_DOWN:
+		times := E.screenRows
+		move := rune(ARROW_UP)
+		if r == PAGE_DOWN {
+			move = rune(ARROW_DOWN)
+		}
+		for i := 0; i < times; i++ {
+			editorMoveCursor(move)
+		}
+		return CONTINUE
+	case ARROW_UP:
+		fallthrough
+	case ARROW_DOWN:
+		fallthrough
+	case ARROW_LEFT:
+		fallthrough
+	case ARROW_RIGHT:
+		editorMoveCursor(r)
+		return CONTINUE
+	default:
+		return CONTINUE
 	}
 }
 
