@@ -381,6 +381,14 @@ func editorProcessKeypress(stdin *bufio.Reader) int {
 	case PAGE_UP:
 		fallthrough
 	case PAGE_DOWN:
+		if r == PAGE_UP {
+			E.cy = E.rowoff
+		} else if r == PAGE_DOWN {
+			E.cy = E.rowoff + E.screenRows - 1
+			if E.cy > len(E.row) {
+				E.cy = len(E.row)
+			}
+		}
 		times := E.screenRows
 		move := rune(ARROW_UP)
 		if r == PAGE_DOWN {
